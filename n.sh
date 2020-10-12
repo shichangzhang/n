@@ -6,6 +6,7 @@
 BIN_PATH=/usr/local/bin
 
 NOTES=~/.n/notes
+CURRENT_TASK=~/.n/.current_task
 TIME=$(printf "[%(%Y/%m/%d %r)T]")
 
 function install {
@@ -52,8 +53,20 @@ case "$1" in
         ;;
 
     c) # c for clear
-        rm $NOTES
-        touch $NOTES
+        BACKUP_FILE_PATH="$NOTES-$(date +%F-%H-%M-%S)"
+        echo -n "To confirm deletion of notes, enter \"$NOTES\": "
+        read input
+        if [ $input == $NOTES ]
+        then
+            echo "Backing up $NOTES to $BACKUP_FILE_PATH..." &&
+            mv $NOTES $BACKUP_FILE_PATH &&
+            touch $NOTES &&
+            echo "$NOTES has been cleared." && exit
+
+            echo "Failed to backup $NOTES. Notes have not been cleared."
+        else
+            echo "Not clearing $NOTES, input didn't match \"$NOTES\" exactly."
+        fi
         ;;
 
     e) # e for edit
@@ -79,6 +92,12 @@ n e                 - edit notes file (just in case you need it.)
 n t [NUMBER]        - print last note or last [NUMBER] notes
 n h                 - prints this help message
 n uninstall         - uninstall n. I don't know why anyone would want to do this but oh well...
+n update            - update n in $BIN_PATH
+n start             - insert a new note for start of day
+n stop              - insert a new note for end of day
+n do                - set current task
+n done              - finish current task
+n timesheet         - summarise today
 EOF
         ;;
 
@@ -86,6 +105,51 @@ EOF
         echo "Removing $BIN_PATH/n..."
         sudo rm $BIN_PATH/n &&
         echo "Uninstalled! Your notes are still in $NOTES."
+        ;;
+
+    update)
+        echo "Updating $BIN_PATH/n..."
+
+        sudo cp $0 $BIN_PATH/n &&
+        sudo chmod +x $BIN_PATH/n &&
+        [ -f "$BIN_PATH/n" ] && echo "Update complete." && exit
+
+        echo "Update failed. Run with updated n.sh script instead." && exit
+        ;;
+
+    start)
+        read note
+        printf "$TIME NSTART %s\n" "$note" >> $NOTES
+        ;;
+
+    stop)
+        read note
+        printf "$TIME NSTOP %s\n" "$note" >> $NOTES
+        printf "" > $CURRENT_TASK
+        ;;
+
+    do)
+        read task
+        printf "$TIME NDO %s\n" "$task" >> $NOTES
+        printf "$task" > $CURRENT_TASK
+        ;;
+
+    done)
+        if [ -f $CURRENT_TASK ]
+        then
+            current_task=$(cat $CURRENT_TASK)
+            if [ -z "$current_task" ]
+            then
+                echo "There's no current task." && exit
+            fi
+        fi
+        read note
+        printf "$TIME NDONE %s\n" "$note" >> $NOTES
+        printf "" > $CURRENT_TASK
+        ;;
+
+    timesheet)
+        echo "This feature hasn't been implemented yet!"
         ;;
 
     *) # default is to read in a note
