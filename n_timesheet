@@ -1,0 +1,110 @@
+#! /usr/bin/awk -f
+
+BEGIN {
+    false = 0
+    true = 1
+    total_timespent = 0
+    period_timespent = 0
+    day_started = false
+    old_task = "unspecified"
+    task = "unspecified"
+}
+
+/ NSTART / {
+    last_time = 0
+    period_timespent = 0
+    old_task = task
+    task = "unspecified"
+    day_started = true
+    for (t in timespent) {
+        timespent[t] = 0
+    }
+    for (t in logs) {
+        logs[t] = ""
+    }
+    date = $1
+    gsub(/[\[]/,"",date)
+    print date
+}
+
+/ NDO / {
+    old_task = task
+    task=$5
+}
+
+{
+    # Work out current time
+    timestamp = $1" "$2" "$3
+    gsub(/[\[\]:\/]/," ",timestamp)
+    split(timestamp, time, " ")
+    if (time[7] == "PM" && time[4] < 12) {
+        time[4] += 12
+    }
+    if (time[7] == "AM" && time[4] == 12 ) {
+        time[4] -= 12
+    }
+    timestamp = time[1]
+    for (i=2;i<=6;i++) {
+        timestamp = timestamp " " time[i]
+    }
+    current_time = mktime(timestamp)
+
+    # Increment time spent for task
+    timespent[task]++ # Ensure task is printed out in the end
+    if (last_time == 0) {
+        last_time = current_time
+    }
+
+    if (day_started) {
+        timespent[old_task] += current_time-last_time
+        total_timespent += current_time-last_time
+        period_timespent += current_time-last_time
+    }
+
+    # Update
+    last_time = current_time
+    old_task = task
+
+    # Combine notes for task
+    out=$4
+    for (i=5;i<=NF;i++) {
+        out = out" "$i
+    }
+    logs[task] = logs[task]"\n    "out
+}
+
+/ NDONE / {
+    old_task = task
+    task="unspecified"
+}
+
+/ NSTOP / {
+    for (t in logs) {
+        if (timespent[t] > 0) {
+            hours = int(timespent[t]/3600)
+            minutes = int(timespent[t] % 3600 / 60)
+            print t, hours "h " minutes "m" logs[t]
+        }
+    }
+    day_started = false
+
+    hours = int(period_timespent/3600)
+    minutes = int(period_timespent % 3600 / 60)
+    print hours "h " minutes "m"
+}
+
+END {
+    if (day_started) {
+        for (t in logs) {
+            if (timespent[t] > 0) {
+                hours = int(timespent[t]/3600)
+                minutes = int(timespent[t] % 3600 / 60)
+                print t, hours "h " minutes "m" logs[t]
+            }
+        }
+    }
+
+    hours = int(total_timespent/3600)
+    minutes = int(total_timespent % 3600 / 60)
+    print "Total " hours "h " minutes "m"
+}
