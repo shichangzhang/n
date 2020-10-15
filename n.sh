@@ -16,6 +16,12 @@ function install {
     sudo cp $0 $BIN_PATH/n &&
     sudo chmod +x $BIN_PATH/n
 
+    # Add n to bing path if it's not there
+    [ ! -f "$BIN_PATH/n_timesheet" ] &&
+    echo "Adding n_timesheet to $BIN_PATH..." &&
+    sudo cp $(dirname $0)/n_timesheet $BIN_PATH/n_timesheet &&
+    sudo chmod +x $BIN_PATH/n_timesheet
+
     # Create $NOTES file if it doesn't exist
     [ ! -f "$NOTES" ] &&
     echo "Creating $NOTES..." &&
@@ -35,8 +41,8 @@ function install {
 }
 
 # Install n and create notes file if notes file or n doesn't exist
-[ ! -f "$NOTES" -o ! -f "$BIN_PATH/n" ] &&
-echo "$NOTES file or $BIN_PATH/n doesn't exist, so I assume n isn't installed. So I'm going to try to install it now." &&
+[ ! -f "$NOTES" -o ! -f "$BIN_PATH/n" -o ! -f "$BIN_PATH/n_timesheet" ] &&
+echo "$NOTES file or $BIN_PATH/n or $BIN_PATH/n_timesheet doesn't exist, so I assume n isn't installed. So I'm going to try to install it now." &&
 install
 
 case "$1" in
@@ -97,7 +103,7 @@ n start             - insert a new note for start of day
 n stop              - insert a new note for end of day
 n do                - set current task
 n done              - finish current task
-n timesheet         - summarise today
+n s                 - summarise today
 EOF
         ;;
 
@@ -112,7 +118,13 @@ EOF
 
         sudo cp $0 $BIN_PATH/n &&
         sudo chmod +x $BIN_PATH/n &&
-        [ -f "$BIN_PATH/n" ] && echo "Update complete." && exit
+        [ -f "$BIN_PATH/n" ] && echo "Update complete."
+
+        echo "Updating $BIN_PATH/n_timesheet..."
+
+        sudo cp $(dirname $0)/n_timesheet $BIN_PATH/n_timesheet &&
+        sudo chmod +x $BIN_PATH/n_timesheet &&
+        [ -f "$BIN_PATH/n_timesheet" ] && echo "Update complete." && exit
 
         echo "Update failed. Run with updated n.sh script instead." && exit
         ;;
@@ -148,8 +160,8 @@ EOF
         printf "" > $CURRENT_TASK
         ;;
 
-    timesheet)
-        echo "This feature hasn't been implemented yet!"
+    s)
+        n_timesheet <(n g)
         ;;
 
     *) # default is to read in a note

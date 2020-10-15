@@ -30,6 +30,9 @@ BEGIN {
 / NDO / {
     old_task = task
     task=$5
+    for(i=6;i<=NF;i++) {
+        task = task " " $i
+    }
 }
 
 {
@@ -102,6 +105,10 @@ END {
                 print t, hours "h " minutes "m" logs[t]
             }
         }
+
+        hours = int(period_timespent/3600)
+        minutes = int(period_timespent % 3600 / 60)
+        print hours "h " minutes "m"
     }
 
     hours = int(total_timespent/3600)
