@@ -33,11 +33,11 @@ function install {
     echo "Install complete." &&
     echo "Try adding a note by typing 'n'   in the command line." &&
     echo "                         or 'n h' for more instructions." &&
-    exit
+    return
 
     echo "Install failed." &&
     echo "You're on your own because Chang clearly was in a rush to share this and didn't test this properly." &&
-    exit
+    return
 }
 
 # Install n and create notes file if notes file or n doesn't exist
