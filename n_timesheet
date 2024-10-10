@@ -29,10 +29,10 @@ BEGIN {
     task = "unspecified"
     day_started = true
     for (t in timespent) {
-        timespent[t] = 0
+        delete timespent[t]
     }
     for (t in logs) {
-        logs[t] = ""
+        delete logs[t]
     }
     date = $1
     gsub(/[\[]/,"",date)
