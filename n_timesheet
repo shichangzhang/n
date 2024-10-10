@@ -8,6 +8,18 @@ BEGIN {
     day_started = false
     old_task = "unspecified"
     task = "unspecified"
+    wfh = 0
+    if(ARGC > 1 && ARGV[1] == "WFH") {
+        print "Working from home hours"
+        wfh = 1
+        delete ARGV[1]
+    }
+}
+
+/ WFH($|\s)/ {
+    date = $1
+    gsub(/[\[]/,"",date)
+    wfh_date = date
 }
 
 / NSTART / {
@@ -24,7 +36,10 @@ BEGIN {
     }
     date = $1
     gsub(/[\[]/,"",date)
-    print date
+
+    if (!wfh || date == wfh_date) {
+        print date
+    }
 }
 
 / NDO / {
@@ -60,8 +75,11 @@ BEGIN {
 
     if (day_started) {
         timespent[old_task] += current_time-last_time
-        total_timespent += current_time-last_time
-        period_timespent += current_time-last_time
+
+        if (!wfh || date == wfh_date) {
+            total_timespent += current_time-last_time
+            period_timespent += current_time-last_time
+        }
     }
 
     # Update
@@ -82,22 +100,7 @@ BEGIN {
 }
 
 / NSTOP / {
-    for (t in logs) {
-        if (timespent[t] > 0) {
-            hours = int(timespent[t]/3600)
-            minutes = int(timespent[t] % 3600 / 60)
-            print t, hours "h " minutes "m" logs[t]
-        }
-    }
-    day_started = false
-
-    hours = int(period_timespent/3600)
-    minutes = int(period_timespent % 3600 / 60)
-    print hours "h " minutes "m"
-}
-
-END {
-    if (day_started) {
+    if (!wfh || date == wfh_date) {
         for (t in logs) {
             if (timespent[t] > 0) {
                 hours = int(timespent[t]/3600)
@@ -105,10 +108,32 @@ END {
                 print t, hours "h " minutes "m" logs[t]
             }
         }
+    }
 
+    day_started = false
+
+    if (!wfh || date == wfh_date) {
         hours = int(period_timespent/3600)
         minutes = int(period_timespent % 3600 / 60)
         print hours "h " minutes "m"
+    }
+}
+
+END {
+    if (!wfh || date == wfh_date) {
+        if (day_started) {
+            for (t in logs) {
+                if (timespent[t] > 0) {
+                    hours = int(timespent[t]/3600)
+                    minutes = int(timespent[t] % 3600 / 60)
+                    print t, hours "h " minutes "m" logs[t]
+                }
+            }
+
+            hours = int(period_timespent/3600)
+            minutes = int(period_timespent % 3600 / 60)
+            print hours "h " minutes "m"
+        }
     }
 
     hours = int(total_timespent/3600)
